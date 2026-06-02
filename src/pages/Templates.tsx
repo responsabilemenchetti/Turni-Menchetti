@@ -15,8 +15,15 @@ export function Templates() {
   useEffect(() => { loadTemplates() }, [])
 
   async function loadTemplates() {
-    const { data } = await supabase.from('shift_templates').select('*').order('name')
-    setTemplates(data || [])
+    const { data } = await supabase.from('shift_templates').select('*')
+    const sorted = (data || []).sort((a, b) => {
+      if (a.is_rest_day && !b.is_rest_day) return 1
+      if (!a.is_rest_day && b.is_rest_day) return -1
+      if (a.is_rest_day && b.is_rest_day) return 0
+      if (a.start_time !== b.start_time) return a.start_time > b.start_time ? 1 : -1
+      return a.end_time > b.end_time ? 1 : -1
+    })
+    setTemplates(sorted)
     setLoading(false)
   }
 
