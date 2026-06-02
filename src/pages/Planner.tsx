@@ -127,7 +127,13 @@ setTemplates(sortedTemplates)
       .reduce((acc, s) => {
         const [sh, sm] = s.start_time!.split(':').map(Number)
         const [eh, em] = s.end_time!.split(':').map(Number)
-        return acc + (eh * 60 + em - sh * 60 - sm) / 60
+        let total = (eh * 60 + em - sh * 60 - sm) / 60
+        if (s.start_time_2 && s.end_time_2) {
+          const [sh2, sm2] = s.start_time_2.split(':').map(Number)
+          const [eh2, em2] = s.end_time_2.split(':').map(Number)
+          total += (eh2 * 60 + em2 - sh2 * 60 - sm2) / 60
+        }
+        return acc + total
       }, 0)
   }
 
