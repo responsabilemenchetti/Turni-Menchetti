@@ -101,7 +101,7 @@ export function Templates() {
   if (loading) return <div className="p-4 text-center text-gray-500">Caricamento...</div>
 
   return (
-    <div className="p-4 space-y-6 pb-40">
+    <div className="p-4 space-y-6 pb-96">
       {/* SEZIONE ORARI */}
       <div>
         <div className="flex justify-between items-center mb-4">
