@@ -39,11 +39,18 @@ export function Planner() {
     }
     const [empRes, tplRes, shiftRes] = await Promise.all([
       supabase.from('employees').select('*').order('first_name'),
-      supabase.from('shift_templates').select('*').order('name'),
+      supabase.from('shift_templates').select('*'),
       supabase.from('shifts').select('*').gte('date', dateFrom).lte('date', dateTo)
     ])
     setEmployees(empRes.data || [])
-    setTemplates(tplRes.data || [])
+    const sortedTemplates = (tplRes.data || []).sort((a, b) => {
+  if (a.is_rest_day && !b.is_rest_day) return 1
+  if (!a.is_rest_day && b.is_rest_day) return -1
+  if (a.is_rest_day && b.is_rest_day) return 0
+  if (a.start_time !== b.start_time) return a.start_time > b.start_time ? 1 : -1
+  return a.end_time > b.end_time ? 1 : -1
+})
+setTemplates(sortedTemplates)
     setShifts(shiftRes.data || [])
     setLoading(false)
   }
