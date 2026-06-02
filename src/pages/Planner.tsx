@@ -15,6 +15,8 @@ export function Planner() {
   const [shifts, setShifts] = useState<Shift[]>([])
   const [showModal, setShowModal] = useState(false)
   const [selectedCell, setSelectedCell] = useState<{employee: Employee, date: string} | null>(null)
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
   const [loading, setLoading] = useState(true)
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
@@ -51,6 +53,8 @@ export function Planner() {
   }
 
   function openCell(employee: Employee, date: string) {
+    setCustomStart('')
+    setCustomEnd('')
     setSelectedCell({ employee, date })
     setShowModal(true)
   }
@@ -65,6 +69,26 @@ export function Planner() {
       end_time: template.end_time || null,
       template_id: template.id,
       is_rest_day: template.is_rest_day
+    }
+    if (existing) {
+      await supabase.from('shifts').update(data).eq('id', existing.id)
+    } else {
+      await supabase.from('shifts').insert(data)
+    }
+    setShowModal(false)
+    loadAll()
+  }
+
+  async function applyCustomShift() {
+    if (!selectedCell || !customStart || !customEnd) return
+    const existing = getShift(selectedCell.employee.id, selectedCell.date)
+    const data = {
+      employee_id: selectedCell.employee.id,
+      date: selectedCell.date,
+      start_time: customStart,
+      end_time: customEnd,
+      template_id: null,
+      is_rest_day: false
     }
     if (existing) {
       await supabase.from('shifts').update(data).eq('id', existing.id)
@@ -223,7 +247,6 @@ export function Planner() {
                 {['L','M','M','G','V','S','D'].map((d, i) => (
                   <div key={i} className="text-center text-xs text-gray-400 py-1">{d}</div>
                 ))}
-                {/* Spazi vuoti per allineare il primo giorno */}
                 {Array.from({length: (monthStart.getDay() || 7) - 1}).map((_, i) => (
                   <div key={`empty-${i}`} />
                 ))}
@@ -294,7 +317,7 @@ export function Planner() {
       {/* Modal selezione turno */}
       {showModal && selectedCell && (
         <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-2xl p-4">
+          <div className="bg-white w-full rounded-t-2xl p-4 max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-3">
               <div>
                 <h3 className="font-semibold text-gray-900">{selectedCell.employee.first_name} {selectedCell.employee.last_name}</h3>
@@ -302,23 +325,49 @@ export function Planner() {
               </div>
               <button onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
-            <div className="space-y-2">
+
+            {/* Orari predefiniti */}
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Orari predefiniti</p>
+            <div className="grid grid-cols-2 gap-2 mb-4">
               {templates.map(t => (
                 <button key={t.id} onClick={() => applyTemplate(t)}
-                  className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 flex justify-between items-center">
-                  <span className="font-medium text-gray-800">{t.name}</span>
-                  <span className="text-sm text-gray-500">
-                    {t.is_rest_day ? 'Riposo' : `${t.start_time} → ${t.end_time}`}
+                  className="text-left px-3 py-2 rounded-xl bg-gray-50 hover:bg-blue-50 border border-gray-100">
+                  <span className="font-medium text-gray-800 text-sm block">{t.name}</span>
+                  <span className="text-xs text-gray-500">
+                    {t.is_rest_day ? '😴 Riposo' : `${t.start_time} → ${t.end_time}`}
                   </span>
                 </button>
               ))}
-              {getShift(selectedCell.employee.id, selectedCell.date) && (
-                <button onClick={deleteShift}
-                  className="w-full px-4 py-3 rounded-xl bg-red-50 text-red-600 font-medium hover:bg-red-100">
-                  Elimina turno
-                </button>
-              )}
             </div>
+
+            {/* Orario personalizzato */}
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Orario personalizzato</p>
+            <div className="flex gap-2 items-end mb-4">
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 mb-1">Inizio</p>
+                <input type="time" value={customStart}
+                  onChange={e => setCustomStart(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 mb-1">Fine</p>
+                <input type="time" value={customEnd}
+                  onChange={e => setCustomEnd(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <button onClick={applyCustomShift}
+                disabled={!customStart || !customEnd}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40">
+                ✓
+              </button>
+            </div>
+
+            {getShift(selectedCell.employee.id, selectedCell.date) && (
+              <button onClick={deleteShift}
+                className="w-full px-4 py-3 rounded-xl bg-red-50 text-red-600 font-medium hover:bg-red-100">
+                Elimina turno
+              </button>
+            )}
           </div>
         </div>
       )}
