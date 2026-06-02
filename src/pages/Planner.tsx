@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Employee, ShiftTemplate, Shift } from '../types/index'
-import { ChevronLeft, ChevronRight, X, Moon, LayoutGrid, List } from 'lucide-react'
+import type { Employee, ShiftTemplate, Shift, AbsenceType } from '../types/index'
+import { ChevronLeft, ChevronRight, X, LayoutGrid, List } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval } from 'date-fns'
 import { it } from 'date-fns/locale'
 
@@ -13,12 +13,13 @@ export function Planner() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [templates, setTemplates] = useState<ShiftTemplate[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
+  const [absenceTypes, setAbsenceTypes] = useState<AbsenceType[]>([])
   const [showModal, setShowModal] = useState(false)
   const [selectedCell, setSelectedCell] = useState<{employee: Employee, date: string} | null>(null)
   const [customStart, setCustomStart] = useState('')
-const [customEnd, setCustomEnd] = useState('')
-const [customStart2, setCustomStart2] = useState('')
-const [customEnd2, setCustomEnd2] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+  const [customStart2, setCustomStart2] = useState('')
+  const [customEnd2, setCustomEnd2] = useState('')
   const [loading, setLoading] = useState(true)
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
@@ -39,26 +40,32 @@ const [customEnd2, setCustomEnd2] = useState('')
       dateFrom = format(monthStart, 'yyyy-MM-dd')
       dateTo = format(monthEnd, 'yyyy-MM-dd')
     }
-    const [empRes, tplRes, shiftRes] = await Promise.all([
+    const [empRes, tplRes, shiftRes, absRes] = await Promise.all([
       supabase.from('employees').select('*').order('first_name'),
       supabase.from('shift_templates').select('*'),
-      supabase.from('shifts').select('*').gte('date', dateFrom).lte('date', dateTo)
+      supabase.from('shifts').select('*').gte('date', dateFrom).lte('date', dateTo),
+      supabase.from('absence_types').select('*').order('name')
     ])
     setEmployees(empRes.data || [])
     const sortedTemplates = (tplRes.data || []).sort((a, b) => {
-  if (a.is_rest_day && !b.is_rest_day) return 1
-  if (!a.is_rest_day && b.is_rest_day) return -1
-  if (a.is_rest_day && b.is_rest_day) return 0
-  if (a.start_time !== b.start_time) return a.start_time > b.start_time ? 1 : -1
-  return a.end_time > b.end_time ? 1 : -1
-})
-setTemplates(sortedTemplates)
+      if (a.is_rest_day && !b.is_rest_day) return 1
+      if (!a.is_rest_day && b.is_rest_day) return -1
+      if (a.is_rest_day && b.is_rest_day) return 0
+      if (a.start_time !== b.start_time) return a.start_time > b.start_time ? 1 : -1
+      return a.end_time > b.end_time ? 1 : -1
+    })
+    setTemplates(sortedTemplates)
     setShifts(shiftRes.data || [])
+    setAbsenceTypes(absRes.data || [])
     setLoading(false)
   }
 
   function getShift(employeeId: string, date: string) {
     return shifts.find(s => s.employee_id === employeeId && s.date === date)
+  }
+
+  function getAbsenceType(id?: string) {
+    return absenceTypes.find(a => a.id === id)
   }
 
   function openCell(employee: Employee, date: string) {
@@ -79,7 +86,31 @@ setTemplates(sortedTemplates)
       start_time: template.start_time || null,
       end_time: template.end_time || null,
       template_id: template.id,
-      is_rest_day: template.is_rest_day
+      is_rest_day: template.is_rest_day,
+      absence_type_id: null
+    }
+    if (existing) {
+      await supabase.from('shifts').update(data).eq('id', existing.id)
+    } else {
+      await supabase.from('shifts').insert(data)
+    }
+    setShowModal(false)
+    loadAll()
+  }
+
+  async function applyAbsence(absenceType: AbsenceType) {
+    if (!selectedCell) return
+    const existing = getShift(selectedCell.employee.id, selectedCell.date)
+    const data = {
+      employee_id: selectedCell.employee.id,
+      date: selectedCell.date,
+      start_time: null,
+      end_time: null,
+      start_time_2: null,
+      end_time_2: null,
+      template_id: null,
+      is_rest_day: true,
+      absence_type_id: absenceType.id
     }
     if (existing) {
       await supabase.from('shifts').update(data).eq('id', existing.id)
@@ -101,7 +132,8 @@ setTemplates(sortedTemplates)
       start_time_2: customStart2 || null,
       end_time_2: customEnd2 || null,
       template_id: null,
-      is_rest_day: false
+      is_rest_day: false,
+      absence_type_id: null
     }
     if (existing) {
       await supabase.from('shifts').update(data).eq('id', existing.id)
@@ -135,6 +167,12 @@ setTemplates(sortedTemplates)
         }
         return acc + total
       }, 0)
+  }
+
+  function renderRestCell(shift: Shift) {
+    const absence = getAbsenceType(shift.absence_type_id)
+    if (absence) return <span style={{fontSize: '16px'}}>{absence.icon}</span>
+    return <span style={{fontSize: '16px'}}>🌙</span>
   }
 
   function prev() {
@@ -225,14 +263,16 @@ setTemplates(sortedTemplates)
                   {days.map(day => {
                     const dateStr = format(day, 'yyyy-MM-dd')
                     const shift = getShift(emp.id, dateStr)
+                    const absence = shift?.absence_type_id ? getAbsenceType(shift.absence_type_id) : null
                     return (
                       <td key={dateStr} className="p-1">
                         <button onClick={() => openCell(emp, dateStr)}
                           className={`w-full min-h-12 rounded-lg text-xs p-1 flex flex-col items-center justify-center transition-colors
-                            ${shift?.is_rest_day ? 'bg-gray-100 text-gray-400' :
+                            ${shift?.is_rest_day ? 'text-white' :
                               shift ? 'text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-300'}`}
-                          style={shift && !shift.is_rest_day ? { backgroundColor: emp.color } : {}}>
-                          {shift?.is_rest_day ? <Moon size={12} /> :
+                          style={shift?.is_rest_day ? { backgroundColor: absence?.color || '#6B7280' } :
+                            shift ? { backgroundColor: emp.color } : {}}>
+                          {shift?.is_rest_day ? renderRestCell(shift) :
                             shift ? (<>
                               <span>{shift.start_time?.slice(0,5)}</span>
                               <span>{shift.end_time?.slice(0,5)}</span>
@@ -277,17 +317,18 @@ setTemplates(sortedTemplates)
                 {monthDays.map(day => {
                   const dateStr = format(day, 'yyyy-MM-dd')
                   const shift = getShift(emp.id, dateStr)
+                  const absence = shift?.absence_type_id ? getAbsenceType(shift.absence_type_id) : null
                   const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
                   return (
                     <button key={dateStr} onClick={() => openCell(emp, dateStr)}
                       className={`aspect-square rounded-lg text-xs flex flex-col items-center justify-center p-0.5
-                        ${shift?.is_rest_day ? 'bg-gray-100 text-gray-400' :
-                          shift ? 'text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-400'}
+                        ${shift ? 'text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-400'}
                         ${isToday ? 'ring-2 ring-blue-400' : ''}`}
-                      style={shift && !shift.is_rest_day ? { backgroundColor: emp.color } : {}}>
+                      style={shift?.is_rest_day ? { backgroundColor: absence?.color || '#6B7280' } :
+                        shift ? { backgroundColor: emp.color } : {}}>
                       <span className="font-medium">{format(day, 'd')}</span>
+                      {shift?.is_rest_day && <span style={{fontSize: '10px'}}>{absence?.icon || '🌙'}</span>}
                       {shift && !shift.is_rest_day && <span style={{fontSize: '8px'}}>{shift.start_time?.slice(0,5)}</span>}
-                      {shift?.is_rest_day && <Moon size={8} />}
                     </button>
                   )
                 })}
@@ -314,17 +355,18 @@ setTemplates(sortedTemplates)
                 {monthDays.map(day => {
                   const dateStr = format(day, 'yyyy-MM-dd')
                   const shift = getShift(emp.id, dateStr)
+                  const absence = shift?.absence_type_id ? getAbsenceType(shift.absence_type_id) : null
                   const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
                   return (
                     <button key={dateStr} onClick={() => openCell(emp, dateStr)}
                       className={`w-full flex items-center px-3 py-2 text-left hover:bg-gray-50 ${isToday ? 'bg-blue-50' : ''}`}>
-                      <span className={`text-xs w-8 font-medium ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
+                      <span className={`text-xs w-12 font-medium ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
                         {format(day, 'EEE', {locale: it})} {format(day, 'd')}
                       </span>
                       {shift ? (
-                        <span className={`ml-3 text-xs px-2 py-0.5 rounded-full font-medium ${shift.is_rest_day ? 'bg-gray-100 text-gray-500' : 'text-white'}`}
-                          style={!shift.is_rest_day ? { backgroundColor: emp.color } : {}}>
-                          {shift.is_rest_day ? 'Riposo' : `${shift.start_time?.slice(0,5)} → ${shift.end_time?.slice(0,5)}`}
+                        <span className="ml-3 text-xs px-2 py-0.5 rounded-full font-medium text-white"
+                          style={{ backgroundColor: shift.is_rest_day ? (absence?.color || '#6B7280') : emp.color }}>
+                          {shift.is_rest_day ? `${absence?.icon || '🌙'} ${absence?.name || 'Riposo'}` : `${shift.start_time?.slice(0,5)} → ${shift.end_time?.slice(0,5)}`}
                         </span>
                       ) : (
                         <span className="ml-3 text-xs text-gray-300">— nessun turno</span>
@@ -350,16 +392,27 @@ setTemplates(sortedTemplates)
               <button onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
 
+            {/* Tipi di assenza */}
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Assenze</p>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {absenceTypes.map(a => (
+                <button key={a.id} onClick={() => applyAbsence(a)}
+                  className="flex flex-col items-center justify-center px-2 py-3 rounded-xl border border-gray-100 hover:opacity-80"
+                  style={{ backgroundColor: a.color + '22' }}>
+                  <span style={{fontSize: '20px'}}>{a.icon}</span>
+                  <span className="text-xs font-medium mt-1" style={{ color: a.color }}>{a.name}</span>
+                </button>
+              ))}
+            </div>
+
             {/* Orari predefiniti */}
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Orari predefiniti</p>
             <div className="grid grid-cols-2 gap-2 mb-4">
-              {templates.map(t => (
+              {templates.filter(t => !t.is_rest_day).map(t => (
                 <button key={t.id} onClick={() => applyTemplate(t)}
                   className="text-left px-3 py-2 rounded-xl bg-gray-50 hover:bg-blue-50 border border-gray-100">
                   <span className="font-medium text-gray-800 text-sm block">{t.name}</span>
-                  <span className="text-xs text-gray-500">
-                    {t.is_rest_day ? '😴 Riposo' : `${t.start_time} → ${t.end_time}`}
-                  </span>
+                  <span className="text-xs text-gray-500">{t.start_time} → {t.end_time}</span>
                 </button>
               ))}
             </div>

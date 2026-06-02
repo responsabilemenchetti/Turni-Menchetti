@@ -27,6 +27,14 @@ export interface Shift {
   end_time_2?: string
   template_id?: string
   is_rest_day: boolean
+  absence_type_id?: string
   notes?: string
+  created_at?: string
+}
+export interface AbsenceType {
+  id: string
+  name: string
+  color: string
+  icon: string
   created_at?: string
 }
