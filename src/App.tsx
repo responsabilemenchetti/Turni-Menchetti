@@ -11,14 +11,14 @@ function App() {
   const [currentPage, setCurrentPage] = useState<Page>('planner')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-y-auto">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3">
         <h1 className="text-xl font-bold text-gray-900">🥐 Turni Menchetti</h1>
       </header>
 
       {/* Content */}
-      <main className="pb-20">
+      <main className="pb-32 overflow-y-auto">
         {currentPage === 'planner' && <Planner />}
         {currentPage === 'employees' && <Employees />}
         {currentPage === 'templates' && <Templates />}
