@@ -23,6 +23,8 @@ export interface Shift {
   date: string
   start_time?: string
   end_time?: string
+  start_time_2?: string
+  end_time_2?: string
   template_id?: string
   is_rest_day: boolean
   notes?: string

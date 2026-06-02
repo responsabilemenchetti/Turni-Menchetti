@@ -16,7 +16,9 @@ export function Planner() {
   const [showModal, setShowModal] = useState(false)
   const [selectedCell, setSelectedCell] = useState<{employee: Employee, date: string} | null>(null)
   const [customStart, setCustomStart] = useState('')
-  const [customEnd, setCustomEnd] = useState('')
+const [customEnd, setCustomEnd] = useState('')
+const [customStart2, setCustomStart2] = useState('')
+const [customEnd2, setCustomEnd2] = useState('')
   const [loading, setLoading] = useState(true)
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
@@ -62,6 +64,8 @@ setTemplates(sortedTemplates)
   function openCell(employee: Employee, date: string) {
     setCustomStart('')
     setCustomEnd('')
+    setCustomStart2('')
+    setCustomEnd2('')
     setSelectedCell({ employee, date })
     setShowModal(true)
   }
@@ -94,6 +98,8 @@ setTemplates(sortedTemplates)
       date: selectedCell.date,
       start_time: customStart,
       end_time: customEnd,
+      start_time_2: customStart2 || null,
+      end_time_2: customEnd2 || null,
       template_id: null,
       is_rest_day: false
     }
@@ -221,7 +227,12 @@ setTemplates(sortedTemplates)
                               shift ? 'text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-300'}`}
                           style={shift && !shift.is_rest_day ? { backgroundColor: emp.color } : {}}>
                           {shift?.is_rest_day ? <Moon size={12} /> :
-                            shift ? (<><span>{shift.start_time?.slice(0,5)}</span><span>{shift.end_time?.slice(0,5)}</span></>) :
+                            shift ? (<>
+                              <span>{shift.start_time?.slice(0,5)}</span>
+                              <span>{shift.end_time?.slice(0,5)}</span>
+                              {shift.start_time_2 && <span>{shift.start_time_2?.slice(0,5)}</span>}
+                              {shift.end_time_2 && <span>{shift.end_time_2?.slice(0,5)}</span>}
+                            </>) :
                             <span>+</span>}
                         </button>
                       </td>
@@ -349,7 +360,7 @@ setTemplates(sortedTemplates)
 
             {/* Orario personalizzato */}
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Orario personalizzato</p>
-            <div className="flex gap-2 items-end mb-4">
+            <div className="flex gap-2 items-end mb-2">
               <div className="flex-1">
                 <p className="text-xs text-gray-400 mb-1">Inizio</p>
                 <input type="time" value={customStart}
@@ -360,6 +371,20 @@ setTemplates(sortedTemplates)
                 <p className="text-xs text-gray-400 mb-1">Fine</p>
                 <input type="time" value={customEnd}
                   onChange={e => setCustomEnd(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div className="flex gap-2 items-end mb-4">
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 mb-1">Inizio 2 (opzionale)</p>
+                <input type="time" value={customStart2}
+                  onChange={e => setCustomStart2(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 mb-1">Fine 2 (opzionale)</p>
+                <input type="time" value={customEnd2}
+                  onChange={e => setCustomEnd2(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
               </div>
               <button onClick={applyCustomShift}
