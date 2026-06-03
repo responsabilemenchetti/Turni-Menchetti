@@ -331,6 +331,9 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                       {shift?.is_rest_day && <span style={{fontSize: '10px'}}>{absence?.icon || '🌙'}</span>}
                       {shift && !shift.is_rest_day && <span style={{fontSize: '8px'}}>{shift.start_time?.slice(0,5)}</span>}
                       {shift && !shift.is_rest_day && <span style={{fontSize: '8px'}}>{shift.end_time?.slice(0,5)}</span>}
+                      {shift && !shift.is_rest_day && shift.start_time_2 && <span style={{fontSize: '8px'}}>{'—'}</span>}
+                      {shift && !shift.is_rest_day && shift.start_time_2 && <span style={{fontSize: '8px'}}>{shift.start_time_2?.slice(0,5)}</span>}
+                      {shift && !shift.is_rest_day && shift.end_time_2 && <span style={{fontSize: '8px'}}>{shift.end_time_2?.slice(0,5)}</span>}
                     </button>
                   )
                 })}
