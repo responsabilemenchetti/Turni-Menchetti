@@ -7,7 +7,7 @@ import { it } from 'date-fns/locale'
 
 type ViewMode = 'week' | 'month-grid' | 'month-list'
 
-export function Planner() {
+export function Planner({ role }: { role: 'admin' | 'viewer' }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('week')
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -69,6 +69,7 @@ export function Planner() {
   }
 
   function openCell(employee: Employee, date: string) {
+    if (role !== 'admin') return
     setCustomStart('')
     setCustomEnd('')
     setCustomStart2('')
@@ -467,7 +468,7 @@ export function Planner() {
               </button>
             </div>
 
-            {getShift(selectedCell.employee.id, selectedCell.date) && (
+            {role === 'admin' && getShift(selectedCell.employee.id, selectedCell.date) && (
               <button onClick={deleteShift}
                 className="w-full px-4 py-3 rounded-xl bg-red-50 text-red-600 font-medium hover:bg-red-100">
                 Elimina turno

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { ShiftTemplate, AbsenceType } from '../types/index'
 import { Plus, Pencil, Trash2, X, Moon } from 'lucide-react'
 
-export function Templates() {
+export function Templates({ role }: { role: 'admin' | 'viewer' }) {
   const [templates, setTemplates] = useState<ShiftTemplate[]>([])
   const [absenceTypes, setAbsenceTypes] = useState<AbsenceType[]>([])
   const [loading, setLoading] = useState(true)
@@ -106,9 +106,11 @@ export function Templates() {
       <div>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-gray-800">Orari ({templates.length})</h2>
-          <button onClick={openNew} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-sm">
-            <Plus size={16} /> Aggiungi
-          </button>
+          {role === 'admin' && (
+            <button onClick={openNew} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-sm">
+              <Plus size={16} /> Aggiungi
+            </button>
+          )}
         </div>
         <div className="space-y-2">
           {templates.map(t => (
@@ -123,12 +125,16 @@ export function Templates() {
                   {t.is_rest_day ? 'Giorno di riposo' : `${t.start_time} → ${t.end_time}`}
                 </p>
               </div>
-              <button onClick={() => openEdit(t)} className="p-2 text-gray-400 hover:text-blue-600">
-                <Pencil size={16} />
-              </button>
-              <button onClick={() => remove(t.id)} className="p-2 text-gray-400 hover:text-red-600">
-                <Trash2 size={16} />
-              </button>
+              {role === 'admin' && (
+                <button onClick={() => openEdit(t)} className="p-2 text-gray-400 hover:text-blue-600">
+                  <Pencil size={16} />
+                </button>
+              )}
+              {role === 'admin' && (
+                <button onClick={() => remove(t.id)} className="p-2 text-gray-400 hover:text-red-600">
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -138,9 +144,11 @@ export function Templates() {
       <div>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-gray-800">Tipi di assenza ({absenceTypes.length})</h2>
-          <button onClick={openNewAbsence} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-sm">
-            <Plus size={16} /> Aggiungi
-          </button>
+          {role === 'admin' && (
+            <button onClick={openNewAbsence} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-sm">
+              <Plus size={16} /> Aggiungi
+            </button>
+          )}
         </div>
         <div className="space-y-2">
           {absenceTypes.map(a => (
@@ -153,12 +161,16 @@ export function Templates() {
                 <p className="font-medium text-gray-900">{a.name}</p>
                 <p className="text-sm" style={{ color: a.color }}>{a.color}</p>
               </div>
-              <button onClick={() => openEditAbsence(a)} className="p-2 text-gray-400 hover:text-blue-600">
-                <Pencil size={16} />
-              </button>
-              <button onClick={() => removeAbsence(a.id)} className="p-2 text-gray-400 hover:text-red-600">
-                <Trash2 size={16} />
-              </button>
+              {role === 'admin' && (
+                <button onClick={() => openEditAbsence(a)} className="p-2 text-gray-400 hover:text-blue-600">
+                  <Pencil size={16} />
+                </button>
+              )}
+              {role === 'admin' && (
+                <button onClick={() => removeAbsence(a.id)} className="p-2 text-gray-400 hover:text-red-600">
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           ))}
         </div>

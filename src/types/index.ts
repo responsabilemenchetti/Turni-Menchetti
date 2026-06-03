@@ -38,3 +38,7 @@ export interface AbsenceType {
   icon: string
   created_at?: string
 }
+export interface AppSettings {
+  key: string
+  value: string
+}

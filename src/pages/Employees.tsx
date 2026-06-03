@@ -9,7 +9,7 @@ const COLORS = [
   '#6366F1', '#84CC16', '#06B6D4', '#A855F7'
 ]
 
-export function Employees() {
+export function Employees({ role }: { role: 'admin' | 'viewer' }) {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -61,9 +61,11 @@ export function Employees() {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-gray-800">Dipendenti ({employees.length})</h2>
-        <button onClick={openNew} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-sm">
-          <Plus size={16} /> Aggiungi
-        </button>
+        {role === 'admin' && (
+          <button onClick={openNew} className="bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center gap-1 text-sm">
+            <Plus size={16} /> Aggiungi
+          </button>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -77,12 +79,16 @@ export function Employees() {
               <p className="font-medium text-gray-900">{emp.first_name} {emp.last_name}</p>
               <p className="text-sm text-gray-500">{emp.role}</p>
             </div>
-            <button onClick={() => openEdit(emp)} className="p-2 text-gray-400 hover:text-blue-600">
-              <Pencil size={16} />
-            </button>
-            <button onClick={() => remove(emp.id)} className="p-2 text-gray-400 hover:text-red-600">
-              <Trash2 size={16} />
-            </button>
+            {role === 'admin' && (
+              <button onClick={() => openEdit(emp)} className="p-2 text-gray-400 hover:text-blue-600">
+                <Pencil size={16} />
+              </button>
+            )}
+            {role === 'admin' && (
+              <button onClick={() => remove(emp.id)} className="p-2 text-gray-400 hover:text-red-600">
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
         ))}
         {employees.length === 0 && (
