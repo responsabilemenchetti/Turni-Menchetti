@@ -467,7 +467,7 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
             </div>
             <button onClick={applyCustomShift}
               disabled={!customStart || !customEnd}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 mb-4">
+              className="w-full bg-blue-600 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 mb-8">
               Conferma orario
             </button>
 
