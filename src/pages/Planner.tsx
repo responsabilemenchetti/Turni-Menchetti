@@ -465,18 +465,19 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
               </div>
             </div>
-            <button onClick={applyCustomShift}
-              disabled={!customStart || !customEnd}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 mb-8">
-              Conferma orario
-            </button>
-
-            {role === 'admin' && getShift(selectedCell.employee.id, selectedCell.date) && (
-              <button onClick={deleteShift}
-                className="w-full px-4 py-3 rounded-xl bg-red-50 text-red-600 font-medium hover:bg-red-100">
-                Elimina turno
+            <div className="flex gap-3">
+              <button onClick={applyCustomShift}
+                disabled={!customStart || !customEnd}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40">
+                Conferma orario
               </button>
-            )}
+              {role === 'admin' && getShift(selectedCell.employee.id, selectedCell.date) && (
+                <button onClick={deleteShift}
+                  className="flex-1 px-4 py-3 rounded-xl bg-red-50 text-red-600 font-medium">
+                  Elimina turno
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
