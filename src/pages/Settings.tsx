@@ -23,10 +23,14 @@ export function Settings({ onLogout }: Props) {
   }
 
   async function save() {
+    const newToken = Date.now().toString()
     await Promise.all([
       supabase.from('app_settings').update({ value: adminPassword }).eq('key', 'admin_password'),
-      supabase.from('app_settings').update({ value: viewerPassword }).eq('key', 'viewer_password')
+      supabase.from('app_settings').update({ value: viewerPassword }).eq('key', 'viewer_password'),
+      supabase.from('app_settings').update({ value: newToken }).eq('key', 'session_token')
     ])
+    localStorage.setItem('session_token', newToken)
+    localStorage.setItem('current_token', newToken)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }

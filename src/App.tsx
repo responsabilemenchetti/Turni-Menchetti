@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Employees } from './pages/Employees'
 import { Planner } from './pages/Planner'
 import { Templates } from './pages/Templates'
@@ -11,7 +11,15 @@ import './App.css'
 type Page = 'planner' | 'employees' | 'templates' | 'settings'
 
 function App() {
-  const { role, login, logout } = useAuth()
+  const { role, login, logout, checkToken } = useAuth()
+
+  useEffect(() => {
+    if (role) {
+      checkToken().then(valid => {
+        if (!valid) logout()
+      })
+    }
+  }, [])
   const [currentPage, setCurrentPage] = useState<Page>('planner')
 
   if (!role) return <Login onLogin={login} />
