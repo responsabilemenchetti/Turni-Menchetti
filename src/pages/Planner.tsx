@@ -369,7 +369,7 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                         <div className="ml-3 flex items-center gap-2">
                           <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
                             style={{ backgroundColor: shift.is_rest_day ? (absence?.color || '#6B7280') : emp.color }}>
-                            {shift.is_rest_day ? `${absence?.icon || '🌙'} ${absence?.name || 'Riposo'}` : `${shift.start_time?.slice(0,5)} → ${shift.end_time?.slice(0,5)}`}
+                            {shift.is_rest_day ? `${absence?.icon || '🌙'} ${absence?.name || 'Riposo'}` : `${shift.start_time?.slice(0,5)} → ${shift.end_time?.slice(0,5)}${shift.start_time_2 ? ` | ${shift.start_time_2?.slice(0,5)} → ${shift.end_time_2?.slice(0,5)}` : ''}`}
                           </span>
                           {!shift.is_rest_day && shift.start_time && shift.end_time && (() => {
                             const [sh, sm] = shift.start_time!.split(':').map(Number)
@@ -448,7 +448,7 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
               </div>
             </div>
-            <div className="flex gap-2 items-end mb-4">
+            <div className="flex gap-2 mb-2">
               <div className="flex-1">
                 <p className="text-xs text-gray-400 mb-1">Inizio 2 (opzionale)</p>
                 <input type="time" value={customStart2}
@@ -461,12 +461,12 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                   onChange={e => setCustomEnd2(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
               </div>
-              <button onClick={applyCustomShift}
-                disabled={!customStart || !customEnd}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40">
-                ✓
-              </button>
             </div>
+            <button onClick={applyCustomShift}
+              disabled={!customStart || !customEnd}
+              className="w-full bg-blue-600 text-white py-3 rounded-xl text-sm font-medium disabled:opacity-40 mb-4">
+              Conferma orario
+            </button>
 
             {role === 'admin' && getShift(selectedCell.employee.id, selectedCell.date) && (
               <button onClick={deleteShift}
