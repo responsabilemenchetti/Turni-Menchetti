@@ -174,25 +174,18 @@ export function Templates() {
             </div>
             <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Nome orario (es. Apertura) *"
               value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" checked={form.is_rest_day}
-                onChange={e => setForm({...form, is_rest_day: e.target.checked})} />
-              Giorno di riposo
-            </label>
-            {!form.is_rest_day && (
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <p className="text-xs text-gray-500 mb-1">Inizio</p>
-                  <input type="time" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                    value={form.start_time} onChange={e => setForm({...form, start_time: e.target.value})} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-gray-500 mb-1">Fine</p>
-                  <input type="time" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                    value={form.end_time} onChange={e => setForm({...form, end_time: e.target.value})} />
-                </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 mb-1">Inizio</p>
+                <input type="time" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={form.start_time} onChange={e => setForm({...form, start_time: e.target.value})} />
               </div>
-            )}
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 mb-1">Fine</p>
+                <input type="time" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={form.end_time} onChange={e => setForm({...form, end_time: e.target.value})} />
+              </div>
+            </div>
             <button onClick={save} className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium">
               {editing ? 'Salva modifiche' : 'Aggiungi orario'}
             </button>
