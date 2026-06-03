@@ -329,6 +329,7 @@ export function Planner() {
                       <span className="font-medium">{format(day, 'd')}</span>
                       {shift?.is_rest_day && <span style={{fontSize: '10px'}}>{absence?.icon || '🌙'}</span>}
                       {shift && !shift.is_rest_day && <span style={{fontSize: '8px'}}>{shift.start_time?.slice(0,5)}</span>}
+                      {shift && !shift.is_rest_day && <span style={{fontSize: '8px'}}>{shift.end_time?.slice(0,5)}</span>}
                     </button>
                   )
                 })}
@@ -364,10 +365,23 @@ export function Planner() {
                         {format(day, 'EEE', {locale: it})} {format(day, 'd')}
                       </span>
                       {shift ? (
-                        <span className="ml-3 text-xs px-2 py-0.5 rounded-full font-medium text-white"
-                          style={{ backgroundColor: shift.is_rest_day ? (absence?.color || '#6B7280') : emp.color }}>
-                          {shift.is_rest_day ? `${absence?.icon || '🌙'} ${absence?.name || 'Riposo'}` : `${shift.start_time?.slice(0,5)} → ${shift.end_time?.slice(0,5)}`}
-                        </span>
+                        <div className="ml-3 flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
+                            style={{ backgroundColor: shift.is_rest_day ? (absence?.color || '#6B7280') : emp.color }}>
+                            {shift.is_rest_day ? `${absence?.icon || '🌙'} ${absence?.name || 'Riposo'}` : `${shift.start_time?.slice(0,5)} → ${shift.end_time?.slice(0,5)}`}
+                          </span>
+                          {!shift.is_rest_day && shift.start_time && shift.end_time && (() => {
+                            const [sh, sm] = shift.start_time!.split(':').map(Number)
+                            const [eh, em] = shift.end_time!.split(':').map(Number)
+                            let h = (eh * 60 + em - sh * 60 - sm) / 60
+                            if (shift.start_time_2 && shift.end_time_2) {
+                              const [sh2, sm2] = shift.start_time_2.split(':').map(Number)
+                              const [eh2, em2] = shift.end_time_2.split(':').map(Number)
+                              h += (eh2 * 60 + em2 - sh2 * 60 - sm2) / 60
+                            }
+                            return <span className="text-xs text-gray-400 font-medium">{h}h</span>
+                          })()}
+                        </div>
                       ) : (
                         <span className="ml-3 text-xs text-gray-300">— nessun turno</span>
                       )}
