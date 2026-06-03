@@ -154,10 +154,13 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
   }
 
   function calcHours(employeeId: string, dayList: Date[]) {
+    const ID_104 = 'c1ccb4b7-adb6-4819-bb3d-509c3a587bdl'
     return shifts
-      .filter(s => s.employee_id === employeeId && !s.is_rest_day && s.start_time && s.end_time
-        && dayList.some(d => format(d, 'yyyy-MM-dd') === s.date))
+      .filter(s => s.employee_id === employeeId
+        && dayList.some(d => format(d, 'yyyy-MM-dd') === s.date)
+        && (!s.is_rest_day || s.absence_type_id === ID_104))
       .reduce((acc, s) => {
+        if (s.absence_type_id === ID_104) return acc + 5
         const [sh, sm] = s.start_time!.split(':').map(Number)
         const [eh, em] = s.end_time!.split(':').map(Number)
         let total = (eh * 60 + em - sh * 60 - sm) / 60
