@@ -21,7 +21,7 @@ export function Employees() {
   useEffect(() => { loadEmployees() }, [])
 
   async function loadEmployees() {
-    const { data } = await supabase.from('employees').select('*').order('first_name')
+    const { data } = await supabase.from('employees').select('*').order('role').order('first_name')
     setEmployees(data || [])
     setLoading(false)
   }

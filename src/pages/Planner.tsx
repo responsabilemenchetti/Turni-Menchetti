@@ -41,7 +41,7 @@ export function Planner() {
       dateTo = format(monthEnd, 'yyyy-MM-dd')
     }
     const [empRes, tplRes, shiftRes, absRes] = await Promise.all([
-      supabase.from('employees').select('*').order('first_name'),
+      supabase.from('employees').select('*').order('role').order('first_name'),
       supabase.from('shift_templates').select('*'),
       supabase.from('shifts').select('*').gte('date', dateFrom).lte('date', dateTo),
       supabase.from('absence_types').select('*').order('name')
