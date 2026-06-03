@@ -154,7 +154,7 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
   }
 
   function calcHours(employeeId: string, dayList: Date[]) {
-    const ID_104 = 'c1ccb4b7-adb6-4819-bb3d-509c3a587bdl'
+    const ID_104 = 'c1ccb4b7-adb6-4819-bb3d-509c3a587bdb'
     return shifts
       .filter(s => s.employee_id === employeeId
         && dayList.some(d => format(d, 'yyyy-MM-dd') === s.date)
