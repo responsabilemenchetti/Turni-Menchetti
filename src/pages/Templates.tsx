@@ -46,9 +46,9 @@ export function Templates() {
   }
 
   async function save() {
-    if (!form.name) return
+    if (!form.start_time || !form.end_time) return
     const data = {
-      name: form.name,
+      name: `${form.start_time} → ${form.end_time}`,
       start_time: form.is_rest_day ? null : form.start_time,
       end_time: form.is_rest_day ? null : form.end_time,
       is_rest_day: form.is_rest_day
@@ -172,8 +172,7 @@ export function Templates() {
               <h3 className="font-semibold text-gray-900">{editing ? 'Modifica' : 'Nuovo'} Orario</h3>
               <button onClick={() => setShowForm(false)}><X size={20} /></button>
             </div>
-            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Nome orario (es. Apertura) *"
-              value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+            
             <div className="flex gap-2">
               <div className="flex-1">
                 <p className="text-xs text-gray-500 mb-1">Inizio</p>
