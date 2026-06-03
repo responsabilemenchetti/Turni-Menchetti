@@ -296,7 +296,7 @@ export function Planner() {
 
       {/* VISTA MESE GRIGLIA */}
       {viewMode === 'month-grid' && (
-        <div className="space-y-4">
+        <div className="space-y-4" style={{paddingBottom: '120px'}}>
           {employees.map(emp => (
             <div key={emp.id} className="bg-white rounded-xl p-3 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
@@ -340,7 +340,7 @@ export function Planner() {
 
       {/* VISTA MESE LISTA */}
       {viewMode === 'month-list' && (
-        <div className="space-y-2">
+        <div className="space-y-2" style={{paddingBottom: '120px'}}>
           {employees.map(emp => (
             <div key={emp.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="flex items-center gap-2 p-3 border-b border-gray-100">
