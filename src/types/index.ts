@@ -42,3 +42,8 @@ export interface AppSettings {
   key: string
   value: string
 }
+export interface PublishedWeek {
+  id: string
+  week_start: string
+  published_at?: string
+}

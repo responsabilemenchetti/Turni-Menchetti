@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Employee, ShiftTemplate, Shift, AbsenceType } from '../types/index'
+import type { Employee, ShiftTemplate, Shift, AbsenceType, PublishedWeek } from '../types/index'
 import { ChevronLeft, ChevronRight, X, LayoutGrid, List } from 'lucide-react'
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -14,6 +14,7 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
   const [templates, setTemplates] = useState<ShiftTemplate[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
   const [absenceTypes, setAbsenceTypes] = useState<AbsenceType[]>([])
+  const [publishedWeeks, setPublishedWeeks] = useState<PublishedWeek[]>([])
   const [showModal, setShowModal] = useState(false)
   const [selectedCell, setSelectedCell] = useState<{employee: Employee, date: string} | null>(null)
   const [customStart, setCustomStart] = useState('')
@@ -28,6 +29,9 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
   const monthEnd = endOfMonth(currentDate)
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd })
 
+  const currentWeekStart = format(weekStart, 'yyyy-MM-dd')
+  const isCurrentWeekPublished = publishedWeeks.some(w => w.week_start === currentWeekStart)
+
   useEffect(() => { loadAll() }, [currentDate, viewMode])
 
   async function loadAll() {
@@ -40,11 +44,12 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
       dateFrom = format(monthStart, 'yyyy-MM-dd')
       dateTo = format(monthEnd, 'yyyy-MM-dd')
     }
-    const [empRes, tplRes, shiftRes, absRes] = await Promise.all([
+    const [empRes, tplRes, shiftRes, absRes, pubRes] = await Promise.all([
       supabase.from('employees').select('*').order('role').order('first_name'),
       supabase.from('shift_templates').select('*'),
       supabase.from('shifts').select('*').gte('date', dateFrom).lte('date', dateTo),
-      supabase.from('absence_types').select('*').order('name')
+      supabase.from('absence_types').select('*').order('name'),
+      supabase.from('published_weeks').select('*')
     ])
     setEmployees(empRes.data || [])
     const sortedTemplates = (tplRes.data || []).sort((a, b) => {
@@ -57,11 +62,33 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
     setTemplates(sortedTemplates)
     setShifts(shiftRes.data || [])
     setAbsenceTypes(absRes.data || [])
+    setPublishedWeeks(pubRes.data || [])
     setLoading(false)
+  }
+
+  function isWeekPublished(weekStartDate: string) {
+    return publishedWeeks.some(w => w.week_start === weekStartDate)
+  }
+
+  async function togglePublishWeek() {
+    if (isCurrentWeekPublished) {
+      await supabase.from('published_weeks').delete().eq('week_start', currentWeekStart)
+    } else {
+      await supabase.from('published_weeks').insert({ week_start: currentWeekStart })
+    }
+    loadAll()
   }
 
   function getShift(employeeId: string, date: string) {
     return shifts.find(s => s.employee_id === employeeId && s.date === date)
+  }
+
+  function getVisibleShift(employeeId: string, date: string, dayWeekStart: string) {
+    const shift = getShift(employeeId, date)
+    if (!shift) return undefined
+    if (role === 'admin') return shift
+    if (isWeekPublished(dayWeekStart)) return shift
+    return undefined
   }
 
   function getAbsenceType(id?: string) {
@@ -153,12 +180,19 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
     loadAll()
   }
 
-  function calcHours(employeeId: string, dayList: Date[]) {
+  function calcHours(employeeId: string, dayList: Date[], onlyPublished = false) {
     const ID_104 = 'c1ccb4b7-adb6-4819-bb3d-509c3a587bdb'
     return shifts
-      .filter(s => s.employee_id === employeeId
-        && dayList.some(d => format(d, 'yyyy-MM-dd') === s.date)
-        && (!s.is_rest_day || s.absence_type_id === ID_104))
+      .filter(s => {
+        if (s.employee_id !== employeeId) return false
+        const dayInList = dayList.some(d => format(d, 'yyyy-MM-dd') === s.date)
+        if (!dayInList) return false
+        if (onlyPublished) {
+          const sw = format(startOfWeek(new Date(s.date), { weekStartsOn: 1 }), 'yyyy-MM-dd')
+          if (!isWeekPublished(sw)) return false
+        }
+        return !s.is_rest_day || s.absence_type_id === ID_104
+      })
       .reduce((acc, s) => {
         if (s.absence_type_id === ID_104) return acc + 5
         const [sh, sm] = s.start_time!.split(':').map(Number)
@@ -230,6 +264,14 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
         </button>
       </div>
 
+      {/* Pulsante pubblica settimana (solo admin, solo vista settimana) */}
+      {role === 'admin' && viewMode === 'week' && (
+        <button onClick={togglePublishWeek}
+          className={`w-full py-2 rounded-xl text-sm font-medium mb-3 transition-colors ${isCurrentWeekPublished ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+          {isCurrentWeekPublished ? '✅ Settimana pubblicata — tocca per nascondere' : '📢 Pubblica questa settimana'}
+        </button>
+      )}
+
       {employees.length === 0 && (
         <p className="text-center text-gray-400 py-8">Aggiungi prima i dipendenti!</p>
       )}
@@ -266,7 +308,7 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                   </td>
                   {days.map(day => {
                     const dateStr = format(day, 'yyyy-MM-dd')
-                    const shift = getShift(emp.id, dateStr)
+                    const shift = getVisibleShift(emp.id, dateStr, currentWeekStart)
                     const absence = shift?.absence_type_id ? getAbsenceType(shift.absence_type_id) : null
                     return (
                       <td key={dateStr} className="p-1">
@@ -283,13 +325,15 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                               {shift.start_time_2 && <span>{shift.start_time_2?.slice(0,5)}</span>}
                               {shift.end_time_2 && <span>{shift.end_time_2?.slice(0,5)}</span>}
                             </>) :
-                            <span>+</span>}
+                            <span>{role === 'admin' ? '+' : ''}</span>}
                         </button>
                       </td>
                     )
                   })}
                   <td className="p-1 text-center">
-                    <span className="text-xs font-semibold text-gray-700">{calcHours(emp.id, days)}h</span>
+                    <span className="text-xs font-semibold text-gray-700">
+                      {calcHours(emp.id, days, role === 'viewer')}h
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -309,7 +353,9 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                   {emp.first_name[0]}
                 </div>
                 <span className="font-medium text-gray-800 text-sm">{emp.first_name} {emp.last_name}</span>
-                <span className="ml-auto text-xs text-gray-500 font-semibold">{calcHours(emp.id, monthDays)}h</span>
+                <span className="ml-auto text-xs text-gray-500 font-semibold">
+                  {calcHours(emp.id, monthDays, role === 'viewer')}h
+                </span>
               </div>
               <div className="grid grid-cols-7 gap-0.5">
                 {['L','M','M','G','V','S','D'].map((d, i) => (
@@ -320,7 +366,8 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                 ))}
                 {monthDays.map(day => {
                   const dateStr = format(day, 'yyyy-MM-dd')
-                  const shift = getShift(emp.id, dateStr)
+                  const dayWeekStart = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+                  const shift = getVisibleShift(emp.id, dateStr, dayWeekStart)
                   const absence = shift?.absence_type_id ? getAbsenceType(shift.absence_type_id) : null
                   const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
                   return (
@@ -357,12 +404,15 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                   {emp.first_name[0]}
                 </div>
                 <span className="font-medium text-gray-800 text-sm">{emp.first_name} {emp.last_name}</span>
-                <span className="ml-auto text-xs font-semibold text-gray-600">{calcHours(emp.id, monthDays)}h</span>
+                <span className="ml-auto text-xs font-semibold text-gray-600">
+                  {calcHours(emp.id, monthDays, role === 'viewer')}h
+                </span>
               </div>
               <div className="divide-y divide-gray-50">
                 {monthDays.map(day => {
                   const dateStr = format(day, 'yyyy-MM-dd')
-                  const shift = getShift(emp.id, dateStr)
+                  const dayWeekStart = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+                  const shift = getVisibleShift(emp.id, dateStr, dayWeekStart)
                   const absence = shift?.absence_type_id ? getAbsenceType(shift.absence_type_id) : null
                   const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
                   return (
