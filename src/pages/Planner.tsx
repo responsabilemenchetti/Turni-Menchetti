@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight, X, LayoutGrid, List, Printer } from 'lucide-
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval } from 'date-fns'
 import { it } from 'date-fns/locale'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 
 type ViewMode = 'week' | 'month-grid' | 'month-list'
 
@@ -210,6 +209,156 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
       }, 0)
   }
 
+  function hexToRgb(hex: string) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 100, g: 100, b: 100 }
+  }
+
+  function handlePrint() {
+    setPrinting(true)
+    try {
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+      const pageW = 297
+      const pageH = 210
+      const margin = 10
+
+      // Sfondo bianco
+      pdf.setFillColor(255, 255, 255)
+      pdf.rect(0, 0, pageW, pageH, 'F')
+
+      // Titolo
+      pdf.setFontSize(16)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(30, 30, 30)
+      pdf.text('Turni Menchetti', margin, margin + 6)
+
+      // Settimana
+      const weekLabel = format(days[0], 'd MMM', {locale: it}) + ' - ' + format(days[6], 'd MMM yyyy', {locale: it})
+      pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setTextColor(100, 100, 100)
+      pdf.text(weekLabel, pageW - margin, margin + 6, { align: 'right' })
+
+      // Layout tabella
+      const tableTop = margin + 14
+      const nameColW = 28
+      const oreColW = 14
+      const dayColW = (pageW - margin * 2 - nameColW - oreColW) / 7
+      const rowH = (pageH - tableTop - margin) / (employees.length + 1)
+
+      // Intestazione giorni
+      const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+      pdf.setFontSize(8)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(80, 80, 80)
+
+      days.forEach((day, i) => {
+        const x = margin + nameColW + i * dayColW + dayColW / 2
+        const y = tableTop + rowH / 2
+        const dateStr = format(day, 'yyyy-MM-dd')
+        const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
+        if (isToday) {
+          pdf.setTextColor(37, 99, 235)
+        } else {
+          pdf.setTextColor(80, 80, 80)
+        }
+        pdf.text(dayNames[i], x, y - 2, { align: 'center' })
+        pdf.text(format(day, 'd'), x, y + 3, { align: 'center' })
+      })
+
+      // "Ore" header
+      pdf.setTextColor(80, 80, 80)
+      pdf.text('Ore', margin + nameColW + 7 * dayColW + oreColW / 2, tableTop + rowH / 2, { align: 'center' })
+
+      // Righe dipendenti
+      employees.forEach((emp, rowIdx) => {
+        const rowY = tableTop + (rowIdx + 1) * rowH
+        const empColor = hexToRgb(emp.color)
+
+        // Linea separatrice
+        pdf.setDrawColor(220, 220, 220)
+        pdf.setLineWidth(0.2)
+        pdf.line(margin, rowY, pageW - margin, rowY)
+
+        // Pallino colorato + nome
+        pdf.setFillColor(empColor.r, empColor.g, empColor.b)
+        pdf.circle(margin + 3.5, rowY + rowH / 2, 3, 'F')
+        pdf.setFontSize(8)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(50, 50, 50)
+        pdf.text(emp.first_name, margin + 8, rowY + rowH / 2 + 1)
+
+        // Celle turni
+        days.forEach((day, colIdx) => {
+          const dateStr = format(day, 'yyyy-MM-dd')
+          const shift = getVisibleShift(emp.id, dateStr, currentWeekStart)
+          const cellX = margin + nameColW + colIdx * dayColW
+          const cellY = rowY + 1
+          const cellW = dayColW - 1
+          const cellH = rowH - 2
+
+          if (shift) {
+            const absence = shift.absence_type_id ? getAbsenceType(shift.absence_type_id) : null
+            if (shift.is_rest_day) {
+              const absColor = absence?.color ? hexToRgb(absence.color) : { r: 107, g: 114, b: 128 }
+              pdf.setFillColor(absColor.r, absColor.g, absColor.b)
+            } else {
+              pdf.setFillColor(empColor.r, empColor.g, empColor.b)
+            }
+            pdf.roundedRect(cellX, cellY, cellW, cellH, 2, 2, 'F')
+
+            pdf.setFontSize(7)
+            pdf.setFont('helvetica', 'bold')
+            pdf.setTextColor(255, 255, 255)
+            const cx = cellX + cellW / 2
+
+            if (shift.is_rest_day) {
+              pdf.text(absence?.name || 'Riposo', cx, cellY + cellH / 2 + 1, { align: 'center' })
+            } else {
+              const lines = [
+                shift.start_time?.slice(0, 5) || '',
+                shift.end_time?.slice(0, 5) || '',
+              ]
+              if (shift.start_time_2) lines.push(shift.start_time_2.slice(0, 5))
+              if (shift.end_time_2) lines.push(shift.end_time_2.slice(0, 5))
+              const totalLines = lines.length
+              const lineH = 3.2
+              const startY = cellY + cellH / 2 - ((totalLines - 1) * lineH) / 2
+              lines.forEach((line, li) => {
+                pdf.text(line, cx, startY + li * lineH, { align: 'center' })
+              })
+            }
+          } else {
+            pdf.setFillColor(245, 245, 245)
+            pdf.roundedRect(cellX, cellY, cellW, cellH, 2, 2, 'F')
+          }
+        })
+
+        // Ore totali
+        const ore = calcHours(emp.id, days, role === 'viewer')
+        pdf.setFontSize(8)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(50, 50, 50)
+        pdf.text(`${ore}h`, margin + nameColW + 7 * dayColW + oreColW / 2, rowY + rowH / 2 + 1, { align: 'center' })
+      })
+
+      // Bordo esterno tabella
+      pdf.setDrawColor(200, 200, 200)
+      pdf.setLineWidth(0.3)
+      pdf.rect(margin, tableTop, pageW - margin * 2, rowH * (employees.length + 1))
+
+      const fileName = `turni-${format(days[0], 'dd-MM')}-${format(days[6], 'dd-MM-yyyy')}.pdf`
+      pdf.save(fileName)
+    } catch (e) {
+      console.error(e)
+    }
+    setPrinting(false)
+  }
+
   function renderRestCell(shift: Shift) {
     const absence = getAbsenceType(shift.absence_type_id)
     if (absence) return <span style={{fontSize: '14px'}}>{absence.icon}</span>
@@ -224,27 +373,6 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
   function next() {
     if (viewMode === 'week') setCurrentDate(addWeeks(currentDate, 1))
     else setCurrentDate(addMonths(currentDate, 1))
-  }
-
-  async function handlePrint() {
-    setPrinting(true)
-    await new Promise(r => setTimeout(r, 100))
-    const element = document.getElementById('print-area')
-    if (!element) { setPrinting(false); return }
-    const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
-    const pdfW = pdf.internal.pageSize.getWidth()
-    const pdfH = pdf.internal.pageSize.getHeight()
-    const imgW = canvas.width
-    const imgH = canvas.height
-    const ratio = Math.min(pdfW / imgW, pdfH / imgH)
-    const x = (pdfW - imgW * ratio) / 2
-    const y = (pdfH - imgH * ratio) / 2
-    pdf.addImage(imgData, 'PNG', x, y, imgW * ratio, imgH * ratio)
-    const weekLabel = format(days[0], 'd MMM', {locale: it}) + ' - ' + format(days[6], 'd MMM yyyy', {locale: it})
-    pdf.save(`turni-${weekLabel}.pdf`)
-    setPrinting(false)
   }
 
   if (loading) return <div className="p-4 text-center text-gray-500">Caricamento...</div>
@@ -311,7 +439,6 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
       {/* VISTA SETTIMANA */}
       {viewMode === 'week' && (
         <div id="print-area" style={{backgroundColor: '#ffffff', padding: '12px', borderRadius: '12px'}}>
-          {/* Intestazione PDF */}
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-bold text-gray-900">🥐 Turni Menchetti</h2>
             <p className="text-sm text-gray-500 font-medium">
