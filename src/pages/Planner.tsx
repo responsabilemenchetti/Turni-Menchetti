@@ -231,7 +231,6 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
 
   return (
     <>
-      {/* Stili stampa */}
       <style>{`
         @media print {
           body * { visibility: hidden; }
@@ -280,7 +279,7 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
           </button>
         </div>
 
-        {/* Pulsante pubblica + stampa (solo vista settimana) */}
+        {/* Pulsante pubblica + stampa */}
         {viewMode === 'week' && (
           <div className="flex gap-2 mb-3 no-print">
             {role === 'admin' && (
@@ -303,22 +302,13 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
         {/* VISTA SETTIMANA */}
         {viewMode === 'week' && (
           <div id="print-area">
-            {/* Titolo solo in stampa */}
-            <div className="hidden print:block mb-4 text-center">
-              <h2 className="text-lg font-bold">🥐 Turni Menchetti</h2>
-              <p className="text-sm text-gray-600">
-                {format(days[0], 'd MMM', {locale: it})} — {format(days[6], 'd MMM yyyy', {locale: it})}
-              </p>
-            </div>
             <div className="overflow-x-auto">
               <table className="w-full" style={{tableLayout: 'fixed'}}>
                 <thead>
                   <tr>
-                    <th className="text-left p-1 text-xs text-gray-500" style={{width: '14%'}}>
-                      <span className="hidden print:hidden">Dipendente</span>
-                    </th>
+                    <th className="text-left p-1 text-xs text-gray-500" style={{width: '18%'}}></th>
                     {days.map(day => (
-                      <th key={day.toISOString()} className="p-0.5 text-center" style={{width: '11%'}}>
+                      <th key={day.toISOString()} className="p-0.5 text-center" style={{width: '10%'}}>
                         <p className="text-xs text-gray-500 leading-tight">{format(day, 'EEE', {locale: it})}</p>
                         <p className={`text-xs font-semibold leading-tight ${format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'text-blue-600' : 'text-gray-800'}`}>
                           {format(day, 'd')}
@@ -337,7 +327,7 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                             style={{ backgroundColor: emp.color, fontSize: '9px' }}>
                             {emp.first_name[0]}
                           </div>
-                          <span className="text-gray-700 truncate" style={{fontSize: '10px'}}>{emp.first_name}</span>
+                          <span className="text-gray-700" style={{fontSize: '10px'}}>{emp.first_name}</span>
                         </div>
                       </td>
                       {days.map(day => {
