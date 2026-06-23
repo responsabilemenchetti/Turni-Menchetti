@@ -359,6 +359,126 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
     setPrinting(false)
   }
 
+  function handlePrintEmployee(emp: Employee) {
+    setPrinting(true)
+    try {
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pageW = 210
+      const margin = 14
+      let y = margin
+
+      pdf.setFillColor(255, 255, 255)
+      pdf.rect(0, 0, pageW, 297, 'F')
+
+      // Titolo
+      pdf.setFontSize(16)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(30, 30, 30)
+      pdf.text('Turni Menchetti', margin, y + 6)
+
+      pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setTextColor(100, 100, 100)
+      pdf.text(format(currentDate, 'MMMM yyyy', { locale: it }), pageW - margin, y + 6, { align: 'right' })
+      y += 14
+
+      // Nome dipendente + ore totali
+      const empColor = hexToRgb(emp.color)
+      pdf.setFillColor(empColor.r, empColor.g, empColor.b)
+      pdf.circle(margin + 3, y, 3, 'F')
+      pdf.setFontSize(12)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(40, 40, 40)
+      pdf.text(`${emp.first_name} ${emp.last_name}`, margin + 8, y + 1)
+      const totalOre = calcHours(emp.id, monthDays, role === 'viewer')
+      pdf.setTextColor(90, 90, 90)
+      pdf.text(`${totalOre}h totali`, pageW - margin, y + 1, { align: 'right' })
+      y += 8
+
+      pdf.setDrawColor(220, 220, 220)
+      pdf.setLineWidth(0.2)
+      pdf.line(margin, y, pageW - margin, y)
+      y += 4
+
+      const rowH = 6.5
+      const dateColW = 22
+      const shiftColW = 60
+
+      monthDays.forEach(day => {
+        if (y > 280) {
+          pdf.addPage()
+          y = margin
+        }
+        const dateStr = format(day, 'yyyy-MM-dd')
+        const dayWeekStart = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+        const shift = getVisibleShift(emp.id, dateStr, dayWeekStart)
+        const absence = shift?.absence_type_id ? getAbsenceType(shift.absence_type_id) : null
+        const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
+
+        pdf.setFontSize(8.5)
+        pdf.setFont('helvetica', isToday ? 'bold' : 'normal')
+        pdf.setTextColor(isToday ? 37 : 90, isToday ? 99 : 90, isToday ? 235 : 90)
+        pdf.text(`${format(day, 'EEE', { locale: it })} ${format(day, 'd')}`, margin, y + 4)
+
+        if (shift) {
+          let label = ''
+          let r = 107, g = 114, b = 128
+          if (shift.is_rest_day) {
+            label = absence?.name || 'Riposo'
+            if (absence?.color) {
+              const c = hexToRgb(absence.color)
+              r = c.r; g = c.g; b = c.b
+            }
+          } else {
+            label = `${shift.start_time?.slice(0, 5)} → ${shift.end_time?.slice(0, 5)}`
+            if (shift.start_time_2 && shift.end_time_2) {
+              label += `  |  ${shift.start_time_2.slice(0, 5)} → ${shift.end_time_2.slice(0, 5)}`
+            }
+            r = empColor.r; g = empColor.g; b = empColor.b
+          }
+          pdf.setFillColor(r, g, b)
+          const labelW = pdf.getTextWidth(label) + 6
+          pdf.roundedRect(margin + dateColW, y, Math.min(labelW, shiftColW), rowH - 1, 1.5, 1.5, 'F')
+          pdf.setFontSize(8)
+          pdf.setFont('helvetica', 'bold')
+          pdf.setTextColor(255, 255, 255)
+          pdf.text(label, margin + dateColW + 3, y + rowH / 2 + 0.5)
+
+          if (!shift.is_rest_day && shift.start_time && shift.end_time) {
+            const [sh, sm] = shift.start_time.split(':').map(Number)
+            const [eh, em] = shift.end_time.split(':').map(Number)
+            let h = (eh * 60 + em - sh * 60 - sm) / 60
+            if (shift.start_time_2 && shift.end_time_2) {
+              const [sh2, sm2] = shift.start_time_2.split(':').map(Number)
+              const [eh2, em2] = shift.end_time_2.split(':').map(Number)
+              h += (eh2 * 60 + em2 - sh2 * 60 - sm2) / 60
+            }
+            pdf.setFontSize(8)
+            pdf.setFont('helvetica', 'normal')
+            pdf.setTextColor(140, 140, 140)
+            pdf.text(`${h}h`, margin + dateColW + Math.min(labelW, shiftColW) + 4, y + rowH / 2 + 0.5)
+          }
+        } else {
+          pdf.setFontSize(8)
+          pdf.setFont('helvetica', 'normal')
+          pdf.setTextColor(180, 180, 180)
+          pdf.text('— nessun turno', margin + dateColW, y + rowH / 2 + 0.5)
+        }
+
+        y += rowH
+        pdf.setDrawColor(240, 240, 240)
+        pdf.setLineWidth(0.1)
+        pdf.line(margin, y - 1.5, pageW - margin, y - 1.5)
+      })
+
+      const fileName = `turni-${emp.first_name}-${format(currentDate, 'MM-yyyy')}.pdf`
+      pdf.save(fileName)
+    } catch (e) {
+      console.error(e)
+    }
+    setPrinting(false)
+  }
+
   function renderRestCell(shift: Shift) {
     const absence = getAbsenceType(shift.absence_type_id)
     if (absence) return <span style={{fontSize: '14px'}}>{absence.icon}</span>
@@ -579,6 +699,11 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
                 <span className="ml-auto text-xs font-semibold text-gray-600">
                   {calcHours(emp.id, monthDays, role === 'viewer')}h
                 </span>
+                <button onClick={() => handlePrintEmployee(emp)} disabled={printing}
+                  className="ml-2 p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 disabled:opacity-50"
+                  title={`Stampa turni di ${emp.first_name}`}>
+                  <Printer size={14} />
+                </button>
               </div>
               <div className="divide-y divide-gray-50">
                 {monthDays.map(day => {
