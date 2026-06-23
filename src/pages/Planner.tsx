@@ -430,9 +430,9 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
               r = c.r; g = c.g; b = c.b
             }
           } else {
-            label = `${shift.start_time?.slice(0, 5)} → ${shift.end_time?.slice(0, 5)}`
+            label = `${shift.start_time?.slice(0, 5)} - ${shift.end_time?.slice(0, 5)}`
             if (shift.start_time_2 && shift.end_time_2) {
-              label += `  |  ${shift.start_time_2.slice(0, 5)} → ${shift.end_time_2.slice(0, 5)}`
+              label += `  |  ${shift.start_time_2.slice(0, 5)} - ${shift.end_time_2.slice(0, 5)}`
             }
             r = empColor.r; g = empColor.g; b = empColor.b
           }
