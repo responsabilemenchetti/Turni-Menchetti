@@ -418,7 +418,7 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
         pdf.setFontSize(8.5)
         pdf.setFont('helvetica', isToday ? 'bold' : 'normal')
         pdf.setTextColor(isToday ? 37 : 90, isToday ? 99 : 90, isToday ? 235 : 90)
-        pdf.text(`${format(day, 'EEE', { locale: it })} ${format(day, 'd')}`, margin, y + 4)
+        pdf.text(`${format(day, 'EEE', { locale: it }).toUpperCase()} ${format(day, 'd')}`, margin, y + 4)
 
         if (shift) {
           let label = ''
@@ -436,12 +436,10 @@ export function Planner({ role }: { role: 'admin' | 'viewer' }) {
             }
             r = empColor.r; g = empColor.g; b = empColor.b
           }
-          pdf.setFillColor(r, g, b)
           const labelW = pdf.getTextWidth(label) + 6
-          pdf.roundedRect(margin + dateColW, y, Math.min(labelW, shiftColW), rowH - 1, 1.5, 1.5, 'F')
           pdf.setFontSize(8)
           pdf.setFont('helvetica', 'bold')
-          pdf.setTextColor(255, 255, 255)
+          pdf.setTextColor(r, g, b)
           pdf.text(label, margin + dateColW + 3, y + rowH / 2 + 0.5)
 
           if (!shift.is_rest_day && shift.start_time && shift.end_time) {
